@@ -39,10 +39,10 @@ Inspection.init({
     primaryKey: true,
     defaultValue: DataTypes.UUIDV4 // Automatically generate UUIDs
   },
-  carId: DataTypes.UUID,
-  inspectionDate: DataTypes.DATE,
-  inspectionTime: DataTypes.TIME,
-  inspectionLocation: DataTypes.STRING,
+  car: DataTypes.UUID,
+  date: DataTypes.DATE,
+  location: DataTypes.STRING,
+  status: DataTypes.STRING, // 'pending', 'approved', 'rejected'
 }, { sequelize, modelName: 'inspection' })
 
 class Criteria extends Model {}
@@ -64,12 +64,15 @@ CriteriaByInspection.init({
   },
   inspectionId: DataTypes.UUID,
   criteriaId: DataTypes.UUID,
-  result: DataTypes.STRING,
+  score: DataTypes.NUMBER,
   notes: DataTypes.STRING,
 }, { sequelize, modelName: 'criteria_by_inspection' })
 
 // Sync models with database
-sequelize.sync();
+sequelize.sync({ alter: true }).then(() => {
+  console.log("Database & tables altered!");
+});
+
 
 // Middleware for parsing request body
 app.use(express.json());
@@ -142,6 +145,16 @@ app.delete('/inspections/:id', async (req, res) => {
     res.json({ message: 'Inspection deleted' });
   } else {
     res.status(404).json({ message: 'Inspection not found' });
+  }
+});
+
+app.post('/inspections/batch', async (req, res) => {
+  const inspectionArray = req.body.inspectionArray;
+  try {
+    const createdInspection = await Inspection.bulkCreate(inspectionArray);
+    res.status(201).json(createdInspection);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
