@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 
-const { Sequelize, Model, DataTypes } = require('sequelize');
+const { Sequelize, Model, DataTypes, fn, col } = require('sequelize');
 
 const app = express();
 const port = 3000;
@@ -40,7 +40,7 @@ Inspection.init({
     defaultValue: DataTypes.UUIDV4 // Automatically generate UUIDs
   },
   car: DataTypes.UUID,
-  date: DataTypes.DATE,
+  date: DataTypes.STRING,
   location: DataTypes.STRING,
   status: DataTypes.STRING, // 'pending', 'approved', 'rejected'
 }, { sequelize, modelName: 'inspection' })
@@ -69,9 +69,13 @@ CriteriaByInspection.init({
 }, { sequelize, modelName: 'criteria_by_inspection' })
 
 // Sync models with database
-sequelize.sync({ alter: true }).then(() => {
-  console.log("Database & tables altered!");
-});
+
+function removeInspections() {
+  Promise.resolve(Inspection.truncate().then(() => console.log('Inspections removed')));
+}
+
+// removeInspections();
+sequelize.sync();
 
 
 // Middleware for parsing request body
@@ -113,8 +117,16 @@ app.delete('/cars/:id', async (req, res) => {
 });
 
 // CRUD routes for Inspection model
+app.get('/inspections/:status', async (req, res) => {
+  const status = req.params.status;
+  const inspections = await Inspection.findAll({ where: { status: status } })
+  res.json(inspections);
+});
+
 app.get('/inspections', async (req, res) => {
-  const inspections = await Inspection.findAll();
+  const inspections = await Inspection.findAll({
+    order: [['car', 'ASC']]
+  });
   res.json(inspections);
 });
 
@@ -129,9 +141,9 @@ app.post('/inspections', async (req, res) => {
 });
 
 app.put('/inspections/:id', async (req, res) => {
-  const inspection = await Inspection.findByPk(req.params.id);
+  const inspection = await Inspection.findByPk(req.body.inspectionId);
   if (inspection) {
-    await inspection.update(req.body);
+    await inspection.update({status: req.body.status});
     res.json(inspection);
   } else {
     res.status(404).json({ message: 'Inspection not found' });
@@ -240,6 +252,41 @@ app.delete('/criteria_by_inspection/:id', async (req, res) => {
     res.status(404).json({ message: 'CriteriaByInspection not found' });
   }
 });
+
+app.get('/criteria_by_inspection/inspection/:inspectionId', async (req, res) => {
+  const criteriaByInspection = await CriteriaByInspection.findAll({
+    where: { inspectionId: req.params.inspectionId }
+  });
+  res.json(criteriaByInspection);
+});
+
+app.put('/criteria_by_inspection/inspection/:inspectionId', async (req, res) => {
+  const criteriaByInspection = await CriteriaByInspection.findOne({ where: { inspectionId: req.params.inspectionId, criteriaId: req.body.criteriaId } });
+  if (criteriaByInspection) {
+    await criteriaByInspection.update({ score: Number(req.body.score) });
+    res.json(criteriaByInspection);
+  } else {
+    res.status(404).json({ message: 'CriteriaByInspection not found' });
+  }
+});
+
+app.post('/criteria_by_inspection/inspection/:inspectionId/batch', async (req, res) => {
+  const { criteriaByInspectionArray } = req.body;
+  const { inspectionId } = req.params;
+  
+  try {
+    const createdCriteria = await CriteriaByInspection.bulkCreate(
+      criteriaByInspectionArray.map(criteria => ({
+        ...criteria,
+        inspectionId
+      }))
+    );
+    res.status(201).json(createdCriteria);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 // Start server
 app.listen(port, () => {
