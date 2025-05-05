@@ -8,7 +8,7 @@ The frontend of this project is [here](https://github.com/applepiofmyeye/inspect
 
 ## Database Schema
 
-![Database Schema](https://github.com/applepiofmyeye/inspection-report/blob/main/database-schema.drawio.png)
+![Database Schema](https://github.com/applepiofmyeye/express-server-inspection-report/blob/main/database-schema.drawio.png)
 
 Note: the criteria table is seeded with the data from the frontend, with this data: [checklist.ts](https://github.com/applepiofmyeye/inspection-report/blob/main/src/constants/checklist.ts)
 
