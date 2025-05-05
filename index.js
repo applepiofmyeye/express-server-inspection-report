@@ -4,11 +4,12 @@ const cors = require('cors');
 const { Sequelize, Model, DataTypes, fn, col } = require('sequelize');
 
 const app = express();
-const port = 3000;
+const port = 3001;
+const frontend_port = 3000;
 
 // Use CORS middleware
 app.use(cors({
-  origin: 'http://localhost:3001', // Allow requests from this origin
+  origin: `http://localhost:${frontend_port}`, // Allow requests from this origin
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', // Allow these HTTP methods
   credentials: true, // Allow cookies to be sent
 }));
